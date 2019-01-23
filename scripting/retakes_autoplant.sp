@@ -1,156 +1,202 @@
 #include <sourcemod>
+#include <sdkhooks>
 #include <sdktools>
 #include <cstrike>
-#include <retakes>
 
-#pragma newdecls required
 #pragma semicolon 1
+#pragma newdecls required
 
-Bombsite activeBombsite;
-bool hasBombBeenDeleted;
-
-ConVar isPluginEnabled;
-ConVar freezeTime;
-
-float bombPosition[3];
-
-Handle bombTimer;
-
-int bombTicking;
-
-public Plugin myinfo =
-{
-    name = "[Retakes] Autoplant",
-    author = "b3none",
-    description = "Autoplant the bomb for CS:GO Retakes.",
+#define MESSAGE_PREFIX "[\x02InstaDefuse\x01]"
+ 
+Handle hOnlyTooLate = null;
+Handle hcv_InfernoDuration = null;
+Handle hTimer_MolotovThreatEnd = null;
+ 
+public Plugin myinfo = {
+    name = "[Retakes] Instant Defuse",
+    author = "B3none, Eyal282",
+    description = "Allows a CT to instantly defuse the bomb when all Ts are dead and nothing can prevemt the defusal.",
     version = "1.0.0",
     url = "https://github.com/b3none"
-};
+}
 
 public void OnPluginStart()
 {
-    isPluginEnabled = CreateConVar("sm_autoplant_enabled", "1", "Should the autoplant plugin be enabled", _, true, 0.0, true, 1.0);
-
-    freezeTime = FindConVar("mp_freezetime");
-
-    bombTicking = FindSendPropInfo("CPlantedC4", "m_bBombTicking");
-
-    HookEvent("round_start", OnRoundStart, EventHookMode_PostNoCopy);
-    HookEvent("round_end", OnRoundEnd, EventHookMode_PostNoCopy);
+    HookEvent("bomb_begindefuse", Event_BombBeginDefuse, EventHookMode_Post);
+    HookEvent("molotov_detonate", Event_MolotovDetonate);
+    HookEvent("hegrenade_detonate", Event_AttemptInstantDefuse, EventHookMode_Post);
+    
+    HookEvent("player_death", Event_AttemptInstantDefuse, EventHookMode_PostNoCopy);
+    HookEvent("round_start", Event_RoundStart, EventHookMode_PostNoCopy);
+    
+    hcv_InfernoDuration = CreateConVar("instant_defuse_inferno_duration", "7.0", "If Valve ever changed the duration of molotov, this cvar should change with it.");
+    hOnlyTooLate = CreateConVar("instant_defuse_only_too_late", "1.0", "If Valve ever changed the duration of molotov, this cvar should change with it.", _, true, 0.0, true, 1.0);
 }
 
-public Action OnRoundStart(Event eEvent, const char[] sName, bool bDontBroadcast)
+public void OnMapStart()
 {
-    hasBombBeenDeleted = false;
+    hTimer_MolotovThreatEnd = null;
+}
 
-    if (isPluginEnabled.BoolValue) {
-	    for (int client = 1; client <= MaxClients; client++) {
-	        if (IsClientInGame(client) && IsPlayerAlive(client) && GetPlayerWeaponSlot(client, 4) > 0) {
-	            int bomb = GetPlayerWeaponSlot(client, 4);
-	
-	            hasBombBeenDeleted = SafeRemoveWeapon(client, bomb);
-	
-	            GetClientAbsOrigin(client, bombPosition);
-	
-	            delete bombTimer;
-	
-	            bombTimer = CreateTimer(freezeTime.FloatValue, PlantBomb, client);
-	        }
-	    }
+public Action Event_RoundStart(Handle event, const char[] name, bool dontBroadcast)
+{
+    if(hTimer_MolotovThreatEnd != null)
+    {
+        CloseHandle(hTimer_MolotovThreatEnd);
+        hTimer_MolotovThreatEnd = null;
     }
+}
 
+public Action Event_BombBeginDefuse(Handle event, const char[] name, bool dontBroadcast)
+{  
+    RequestFrame(Event_BombBeginDefusePlusFrame, GetEventInt(event, "userid"));
+   
     return Plugin_Continue;
 }
 
-public void OnRoundEnd(Event event, const char[] sName, bool bDontBroadcast)
+public void Event_BombBeginDefusePlusFrame(int userId)
 {
-    delete bombTimer;
-
-    GameRules_SetProp("m_bBombPlanted", 0);
+    int client = GetClientOfUserId(userId);
+   
+    if(IsValidClient(client))
+    {
+    	AttemptInstantDefuse(client);
+    }
 }
 
-public Action PlantBomb(Handle timer, int client)
+void AttemptInstantDefuse(int client, int exemptNade = 0)
 {
-    bombTimer = INVALID_HANDLE;
-
-    if (IsValidClient(client) || !hasBombBeenDeleted) {
-        if (hasBombBeenDeleted) {
-            int bombEntity = CreateEntityByName("planted_c4");
-
-            GameRules_SetProp("m_bBombPlanted", 1);
-            SetEntData(bombEntity, bombTicking, 1, 1, true);
-            SendBombPlanted(client);
-
-            if (DispatchSpawn(bombEntity)) {
-                ActivateEntity(bombEntity);
-                TeleportEntity(bombEntity, bombPosition, NULL_VECTOR, NULL_VECTOR);
-
-                if (!(GetEntityFlags(bombEntity) & FL_ONGROUND)) {
-                    float direction[3];
-                    float floor[3];
-
-                    Handle trace;
-
-                    direction[0] = 89.0;
-
-                    TR_TraceRay(bombPosition, direction, MASK_PLAYERSOLID_BRUSHONLY, RayType_Infinite);
-
-                    if (TR_DidHit(trace)) {
-                        TR_GetEndPosition(floor, trace);
-                        TeleportEntity(bombEntity, floor, NULL_VECTOR, NULL_VECTOR);
-                    }
-                }
-            }
+    if(!GetEntProp(client, Prop_Send, "m_bIsDefusing"))
+    {
+        return;
+    }
+    
+    int StartEnt = MaxClients + 1;
+    
+    int c4 = FindEntityByClassname(StartEnt, "planted_c4");
+    
+    if(c4 == -1 || FindAlivePlayer(CS_TEAM_T) != 0)
+    {
+        return;
+    }
+    else if(GetConVarInt(hOnlyTooLate) == 1 && GetEntPropFloat(c4, Prop_Send, "m_flC4Blow") < GetEntPropFloat(c4, Prop_Send, "m_flDefuseCountDown"))
+    {
+    	// Force Terrorist win because they do not have enough time to defuse the bomb.
+    	CS_TerminateRound(1.0, CSRoundEnd_TargetBombed);
+    	return;
+    }
+    else if(GetEntityFlags(client) && !FL_ONGROUND)
+    {
+    	return;
+    }  
+ 
+    int ent;
+    if((ent = FindEntityByClassname(StartEnt, "hegrenade_projectile")) != -1 || (ent = FindEntityByClassname(StartEnt, "molotov_projectile")) != -1)
+    {
+        if(ent != exemptNade)
+        {
+            PrintToChatAll("%s There is a live nade somewhere, Good luck defusing!", MESSAGE_PREFIX);
+            return;
         }
-    } else {
-        CS_TerminateRound(1.0, CSRoundEnd_Draw);
+    }  
+    else if(hTimer_MolotovThreatEnd != null)
+    {
+        PrintToChatAll("%s Molotov too close to bomb, Good luck defusing!", MESSAGE_PREFIX);
+        return;
     }
+    
+    SetEntPropFloat(c4, Prop_Send, "m_flDefuseCountDown", 0.0);
+    SetEntPropFloat(c4, Prop_Send, "m_flDefuseLength", 0.0);
+    SetEntProp(client, Prop_Send, "m_iProgressBarDuration", 0);
+}
+ 
+public Action Event_AttemptInstantDefuse(Handle event, const char[] name, bool dontBroadcast)
+{
+    int defuser = FindDefusingPlayer();
+   
+    int ent = 0;
+   
+    if(StrContains(name, "detonate") != -1)
+    {
+        ent = GetEventInt(event, "entityid");
+    }
+    
+    if(defuser != 0)
+	{
+        AttemptInstantDefuse(defuser, ent);
+	}
 }
 
-public void SendBombPlanted(int client)
+public Action Event_MolotovDetonate(Handle event, const char[] name, bool dontBroadcast)
 {
-    Event event = CreateEvent("bomb_planted");
-
-    if (event != null) {
-	    event.SetInt("userid", GetClientUserId(client));
-	    event.SetInt("site", view_as<int>(activeBombsite));
-	    event.Fire();
+    float Origin[3];
+    Origin[0] = GetEventFloat(event, "x");
+    Origin[1] = GetEventFloat(event, "y");
+    Origin[2] = GetEventFloat(event, "z");
+   
+    int c4 = FindEntityByClassname(MaxClients + 1, "planted_c4");
+   
+    if(c4 == -1)
+    {
+        return;
+    }
+   
+    float C4Origin[3];
+    GetEntPropVector(c4, Prop_Data, "m_vecOrigin", C4Origin);
+   
+    if(GetVectorDistance(Origin, C4Origin, false) > 150)
+    {
+        return;
+    }
+ 
+    if(hTimer_MolotovThreatEnd != null)
+    {
+        CloseHandle(hTimer_MolotovThreatEnd);
+        hTimer_MolotovThreatEnd = null;
+    }
+   
+    hTimer_MolotovThreatEnd = CreateTimer(GetConVarFloat(hcv_InfernoDuration), Timer_MolotovThreatEnd, _, TIMER_FLAG_NO_MAPCHANGE);
+}
+ 
+public Action Timer_MolotovThreatEnd(Handle timer)
+{
+    hTimer_MolotovThreatEnd = null;
+   
+    int defuser = FindDefusingPlayer();
+   
+    if(defuser != 0)
+    {
+        AttemptInstantDefuse(defuser);
     }
 }
-
-public void Retakes_OnSitePicked(Bombsite& selectedBombsite)
+ 
+stock int FindDefusingPlayer()
 {
-    activeBombsite = selectedBombsite;
-}
-
-stock bool SafeRemoveWeapon(int client, int weapon)
-{
-    if (!IsValidEntity(weapon) || !IsValidEdict(weapon) || !HasEntProp(weapon, Prop_Send, "m_hOwnerEntity")) {
-        return false;
-    }
-
-    int ownerEntity = GetEntPropEnt(weapon, Prop_Send, "m_hOwnerEntity");
-
-    if (ownerEntity != client) {
-        SetEntPropEnt(weapon, Prop_Send, "m_hOwnerEntity", client);
-    }
-
-    CS_DropWeapon(client, weapon, false);
-
-    if (HasEntProp(weapon, Prop_Send, "m_hWeaponWorldModel")) {
-        int worldModel = GetEntPropEnt(weapon, Prop_Send, "m_hWeaponWorldModel");
-
-        if (IsValidEdict(worldModel) && IsValidEntity(worldModel)) {
-            if (!AcceptEntityInput(worldModel, "Kill")) {
-                return false;
-            }
+    for(int i = 1; i <= MaxClients; i++)
+    {
+        if(IsValidClient(i) && IsPlayerAlive(i) && GetEntProp(i, Prop_Send, "m_bIsDefusing"))
+        {
+            return i;
         }
     }
-
-    return AcceptEntityInput(weapon, "Kill");
+   
+    return 0;
+}
+ 
+stock int FindAlivePlayer(int team)
+{
+    for(int i = 1; i <= MaxClients; i++)
+    {
+        if(IsValidClient(i) && IsPlayerAlive(i) && GetClientTeam(i) == team)
+        {
+            return i;
+        }
+    }
+   
+    return 0;
 }
 
 stock bool IsValidClient(int client)
 {
-    return client > 0 && client <= MaxClients && IsClientConnected(client) && IsClientInGame(client);
+    return IsClientInGame(client) && client > 0 && client <= MaxClients && IsClientConnected(client) && IsClientAuthorized(client) && !IsFakeClient(client);
 }
