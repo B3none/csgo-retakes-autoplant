@@ -1,12 +1,12 @@
 #include <sourcemod>
 #include <sdktools>
 #include <cstrike>
-#include <retakes>
 
 #pragma newdecls required
 #pragma semicolon 1
 
-Bombsite activeBombsite;
+int bomber;
+int bombsite;
 bool hasBombBeenDeleted;
 
 ConVar isPluginEnabled;
@@ -18,12 +18,19 @@ Handle bombTimer;
 
 int bombTicking;
 
+enum //Bombsites
+{
+    BOMBSITE_INVALID = -1,
+    BOMBSITE_A = 0,
+    BOMBSITE_B = 1
+}
+
 public Plugin myinfo =
 {
     name = "[Retakes] Autoplant",
     author = "b3none",
     description = "Autoplant the bomb for CS:GO Retakes.",
-    version = "1.0.0",
+    version = "2.0.0",
     url = "https://github.com/b3none"
 };
 
@@ -42,6 +49,9 @@ public void OnPluginStart()
 public Action OnRoundStart(Event eEvent, const char[] sName, bool bDontBroadcast)
 {
     hasBombBeenDeleted = false;
+    
+    bomber = GetClientWithBomb();
+    bombsite = GetNearestBombsite(bomber);
 
     if (isPluginEnabled.BoolValue) {
 	    for (int client = 1; client <= MaxClients; client++) {
@@ -113,14 +123,9 @@ public void SendBombPlanted(int client)
 
     if (event != null) {
 	    event.SetInt("userid", GetClientUserId(client));
-	    event.SetInt("site", view_as<int>(activeBombsite));
+	    event.SetInt("site", bombsite);
 	    event.Fire();
     }
-}
-
-public void Retakes_OnSitePicked(Bombsite& selectedBombsite)
-{
-    activeBombsite = selectedBombsite;
 }
 
 stock bool SafeRemoveWeapon(int client, int weapon)
@@ -148,6 +153,55 @@ stock bool SafeRemoveWeapon(int client, int weapon)
     }
 
     return AcceptEntityInput(weapon, "Kill");
+}
+
+stock int GetClientWithBomb()
+{
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (IsValidClient(i) && HasBomb(i))
+		{
+			return i;
+		}
+	}
+	
+	return -1;
+}
+
+stock bool HasBomb(int client)
+{
+    return GetClientTeam(client) == CS_TEAM_T && GetPlayerWeaponSlot(client, 4) != -1;
+}
+
+stock bool IsWarmup()
+{
+    return GameRules_GetProp("m_bWarmupPeriod") == 1;
+}
+
+stock int GetNearestBombsite(int client)
+{
+	float pos[3];
+	GetClientAbsOrigin(client, pos);
+	
+	int playerManager = FindEntityByClassname(INVALID_ENT_REFERENCE, "cs_player_manager");
+	if (playerManager == INVALID_ENT_REFERENCE)
+	{
+		return INVALID_ENT_REFERENCE;
+	}
+	
+	float aCenter[3], bCenter[3];
+	GetEntPropVector(playerManager, Prop_Send, "m_bombsiteCenterA", aCenter);
+	GetEntPropVector(playerManager, Prop_Send, "m_bombsiteCenterB", bCenter);
+	
+	float aDist = GetVectorDistance(aCenter, pos, true);
+	float bDist = GetVectorDistance(bCenter, pos, true);
+	
+	if (aDist < bDist)
+	{
+		return BOMBSITE_A;
+	}
+	
+	return BOMBSITE_B;
 }
 
 stock bool IsValidClient(int client)
