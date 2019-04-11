@@ -170,7 +170,7 @@ stock int GetClientWithBomb()
 
 stock bool HasBomb(int client)
 {
-    return GetClientTeam(client) == CS_TEAM_T && GetPlayerWeaponSlot(client, 4) != -1;
+    return GetClientTeam(client) == CS_TEAM_T && GetPlayerWeaponSlot(client, 5) != -1;
 }
 
 stock bool IsWarmup()
