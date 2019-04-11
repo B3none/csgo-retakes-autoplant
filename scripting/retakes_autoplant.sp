@@ -30,7 +30,7 @@ public Plugin myinfo =
     name = "[Retakes] Autoplant",
     author = "b3none",
     description = "Autoplant the bomb for CS:GO Retakes.",
-    version = "2.0.0",
+    version = "2.1.0",
     url = "https://github.com/b3none"
 };
 
@@ -50,23 +50,21 @@ public Action OnRoundStart(Event eEvent, const char[] sName, bool bDontBroadcast
 {
     hasBombBeenDeleted = false;
     
-    bomber = GetClientWithBomb();
-    bombsite = GetNearestBombsite(bomber);
+    bomber = GetBomber();
+    
+    if (isPluginEnabled.BoolValue && IsValidClient(bomber))
+    {
+    	bombsite = GetNearestBombsite(bomber);
+    	
+        int bomb = GetPlayerWeaponSlot(bomber, 4);
 
-    if (isPluginEnabled.BoolValue) {
-	    for (int client = 1; client <= MaxClients; client++) {
-	        if (IsClientInGame(client) && IsPlayerAlive(client) && GetPlayerWeaponSlot(client, 4) > 0) {
-	            int bomb = GetPlayerWeaponSlot(client, 4);
-	
-	            hasBombBeenDeleted = SafeRemoveWeapon(client, bomb);
-	
-	            GetClientAbsOrigin(client, bombPosition);
-	
-	            delete bombTimer;
-	
-	            bombTimer = CreateTimer(freezeTime.FloatValue, PlantBomb, client);
-	        }
-	    }
+        hasBombBeenDeleted = SafeRemoveWeapon(bomber, bomb);
+
+        GetClientAbsOrigin(bomber, bombPosition);
+
+        delete bombTimer;
+
+        bombTimer = CreateTimer(freezeTime.FloatValue, PlantBomb, bomber);
     }
 
     return Plugin_Continue;
@@ -83,19 +81,23 @@ public Action PlantBomb(Handle timer, int client)
 {
     bombTimer = INVALID_HANDLE;
 
-    if (IsValidClient(client) || !hasBombBeenDeleted) {
-        if (hasBombBeenDeleted) {
+    if (IsValidClient(client) || !hasBombBeenDeleted)
+    {
+        if (hasBombBeenDeleted)
+        {
             int bombEntity = CreateEntityByName("planted_c4");
 
             GameRules_SetProp("m_bBombPlanted", 1);
             SetEntData(bombEntity, bombTicking, 1, 1, true);
             SendBombPlanted(client);
 
-            if (DispatchSpawn(bombEntity)) {
+            if (DispatchSpawn(bombEntity))
+            {
                 ActivateEntity(bombEntity);
                 TeleportEntity(bombEntity, bombPosition, NULL_VECTOR, NULL_VECTOR);
 
-                if (!(GetEntityFlags(bombEntity) & FL_ONGROUND)) {
+                if (!(GetEntityFlags(bombEntity) & FL_ONGROUND))
+                {
                     float direction[3];
                     float floor[3];
 
@@ -105,14 +107,17 @@ public Action PlantBomb(Handle timer, int client)
 
                     TR_TraceRay(bombPosition, direction, MASK_PLAYERSOLID_BRUSHONLY, RayType_Infinite);
 
-                    if (TR_DidHit(trace)) {
+                    if (TR_DidHit(trace))
+                    {
                         TR_GetEndPosition(floor, trace);
                         TeleportEntity(bombEntity, floor, NULL_VECTOR, NULL_VECTOR);
                     }
                 }
             }
         }
-    } else {
+    } 
+    else
+    {
         CS_TerminateRound(1.0, CSRoundEnd_Draw);
     }
 }
@@ -121,7 +126,8 @@ public void SendBombPlanted(int client)
 {
     Event event = CreateEvent("bomb_planted");
 
-    if (event != null) {
+    if (event != null)
+    {
 	    event.SetInt("userid", GetClientUserId(client));
 	    event.SetInt("site", bombsite);
 	    event.Fire();
@@ -130,23 +136,28 @@ public void SendBombPlanted(int client)
 
 stock bool SafeRemoveWeapon(int client, int weapon)
 {
-    if (!IsValidEntity(weapon) || !IsValidEdict(weapon) || !HasEntProp(weapon, Prop_Send, "m_hOwnerEntity")) {
+    if (!IsValidEntity(weapon) || !IsValidEdict(weapon) || !HasEntProp(weapon, Prop_Send, "m_hOwnerEntity"))
+    {
         return false;
     }
 
     int ownerEntity = GetEntPropEnt(weapon, Prop_Send, "m_hOwnerEntity");
 
-    if (ownerEntity != client) {
+    if (ownerEntity != client)
+    {
         SetEntPropEnt(weapon, Prop_Send, "m_hOwnerEntity", client);
     }
 
     CS_DropWeapon(client, weapon, false);
 
-    if (HasEntProp(weapon, Prop_Send, "m_hWeaponWorldModel")) {
+    if (HasEntProp(weapon, Prop_Send, "m_hWeaponWorldModel"))
+    {
         int worldModel = GetEntPropEnt(weapon, Prop_Send, "m_hWeaponWorldModel");
 
-        if (IsValidEdict(worldModel) && IsValidEntity(worldModel)) {
-            if (!AcceptEntityInput(worldModel, "Kill")) {
+        if (IsValidEdict(worldModel) && IsValidEntity(worldModel))
+        {
+            if (!AcceptEntityInput(worldModel, "Kill"))
+            {
                 return false;
             }
         }
@@ -155,22 +166,9 @@ stock bool SafeRemoveWeapon(int client, int weapon)
     return AcceptEntityInput(weapon, "Kill");
 }
 
-stock int GetClientWithBomb()
+stock int GetBomber()
 {
-	for (int i = 1; i <= MaxClients; i++)
-	{
-		if (IsValidClient(i) && HasBomb(i))
-		{
-			return i;
-		}
-	}
-	
-	return -1;
-}
-
-stock bool HasBomb(int client)
-{
-    return GetClientTeam(client) == CS_TEAM_T && GetPlayerWeaponSlot(client, 5) != -1;
+	return GetEntProp(GetPlayerResourceEntity(), Prop_Send, "m_iPlayerC4");
 }
 
 stock bool IsWarmup()
