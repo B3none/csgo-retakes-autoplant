@@ -8,15 +8,12 @@
 int bomber;
 int bombsite;
 bool hasBombBeenDeleted;
+float bombPosition[3];
+Handle bombTimer;
+int bombTicking;
 
 ConVar isPluginEnabled;
 ConVar freezeTime;
-
-float bombPosition[3];
-
-Handle bombTimer;
-
-int bombTicking;
 
 enum //Bombsites
 {
@@ -30,7 +27,7 @@ public Plugin myinfo =
     name = "[Retakes] Autoplant",
     author = "b3none",
     description = "Autoplant the bomb for CS:GO Retakes.",
-    version = "2.1.0",
+    version = "2.1.1",
     url = "https://github.com/b3none"
 };
 
@@ -48,26 +45,31 @@ public void OnPluginStart()
 
 public Action OnRoundStart(Event eEvent, const char[] sName, bool bDontBroadcast)
 {
-    hasBombBeenDeleted = false;
-    
-    bomber = GetBomber();
-    
-    if (isPluginEnabled.BoolValue && IsValidClient(bomber))
-    {
-    	bombsite = GetNearestBombsite(bomber);
-    	
-        int bomb = GetPlayerWeaponSlot(bomber, 4);
-
-        hasBombBeenDeleted = SafeRemoveWeapon(bomber, bomb);
-
-        GetClientAbsOrigin(bomber, bombPosition);
-
-        delete bombTimer;
-
-        bombTimer = CreateTimer(freezeTime.FloatValue, PlantBomb, bomber);
-    }
-
-    return Plugin_Continue;
+	hasBombBeenDeleted = false;
+	
+	if (!isPluginEnabled.BoolValue)
+	{
+		return Plugin_Continue;
+	}
+	
+	bomber = GetBomber();
+	
+	if (IsValidClient(bomber))
+	{
+		bombsite = GetNearestBombsite(bomber);
+		
+		int bomb = GetPlayerWeaponSlot(bomber, 4);
+		
+		hasBombBeenDeleted = SafeRemoveWeapon(bomber, bomb);
+		
+		GetClientAbsOrigin(bomber, bombPosition);
+		
+		delete bombTimer;
+		
+		bombTimer = CreateTimer(freezeTime.FloatValue, PlantBomb, bomber);
+	}
+	
+	return Plugin_Continue;
 }
 
 public void OnRoundEnd(Event event, const char[] sName, bool bDontBroadcast)
@@ -168,8 +170,22 @@ stock bool SafeRemoveWeapon(int client, int weapon)
 
 stock int GetBomber()
 {
-	return GetEntProp(GetPlayerResourceEntity(), Prop_Send, "m_iPlayerC4");
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (IsValidClient(i) && HasBomb(i))
+		{
+			return i;
+		}
+	}
+	
+	return -1;
 }
+
+stock bool HasBomb(int client)
+{
+    return GetPlayerWeaponSlot(client, 4) != -1;
+}
+
 
 stock bool IsWarmup()
 {
