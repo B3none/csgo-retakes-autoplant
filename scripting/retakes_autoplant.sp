@@ -25,7 +25,7 @@ enum //Bombsites
 public Plugin myinfo =
 {
     name = "[Retakes] Autoplant",
-    author = "b3none",
+    author = "B3none",
     description = "Automatically plant the bomb at the start of the round. This will work with all versions of the retakes plugin.",
     version = "2.1.1",
     url = "https://github.com/b3none"
