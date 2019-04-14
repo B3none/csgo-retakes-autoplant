@@ -8,7 +8,7 @@ To compile this plugin I'd recommend using the [web compiler](https://spider.lim
 
 So as to keep the latest version of the plugin I recommend watching the repository
 
-![Star us](.github/README_ASSETS/watch_releases.png)
+![Watch releases](.github/README_ASSETS/watch_releases.png)
 
 ## Share the love
 
