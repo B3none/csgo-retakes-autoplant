@@ -8,13 +8,13 @@ To compile this plugin I'd recommend using the [web compiler](https://spider.lim
 
 So as to keep the latest version of the plugin I recommend watching the repository
 
-![Watch releases](.github/README_ASSETS/watch_releases.png)
+![Watch releases](https://github.com/b3none/gdprconsent/raw/development/.github/README_ASSETS/watch_releases.png)
 
 ## Share the love
 
 If you appreciate the project then please take the time to star our repository.
 
-![Star us](.github/README_ASSETS/star_us.png)
+![Star us](https://github.com/b3none/gdprconsent/raw/development/.github/README_ASSETS/star_us.png)
 
 # Credits
 _domino - Original.
