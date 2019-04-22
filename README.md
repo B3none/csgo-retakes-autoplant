@@ -3,6 +3,10 @@ Here's my version of the retakes autoplant which is a little more efficient than
 
 # Compiling
 To compile this plugin I'd recommend using the [web compiler](https://spider.limetech.io/).
+The latest version is listed on the [releases tab](https://github.com/b3none/retakes-autoplant/releases)
+
+# Authors
+Alex Blackham - Developer and Maintainer - [B3none](https://github.com/b3none/)
 
 ## Watch for releases
 
