@@ -1,4 +1,5 @@
 #include <sourcemod>
+#include <sdkhooks>
 #include <sdktools>
 #include <cstrike>
 
@@ -150,7 +151,7 @@ stock bool SafeRemoveWeapon(int client, int weapon)
         SetEntPropEnt(weapon, Prop_Send, "m_hOwnerEntity", client);
     }
 
-    CS_DropWeapon(client, weapon, false);
+    SDKHooks_DropWeapon(client, weapon, NULL_VECTOR, NULL_VECTOR);
 
     if (HasEntProp(weapon, Prop_Send, "m_hWeaponWorldModel"))
     {
