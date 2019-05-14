@@ -21,4 +21,4 @@ If you appreciate the project then please take the time to star our repository.
 ![Star us](https://github.com/b3none/gdprconsent/raw/development/.github/README_ASSETS/star_us.png)
 
 # Credits
-_domino - Original.
+domino_ - Original.
