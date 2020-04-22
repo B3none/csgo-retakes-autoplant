@@ -35,42 +35,42 @@ public Plugin myinfo =
 public void OnPluginStart()
 {
     isPluginEnabled = CreateConVar("sm_autoplant_enabled", "1", "Should the autoplant plugin be enabled", _, true, 0.0, true, 1.0);
-
+    
     freezeTime = FindConVar("mp_freezetime");
-
+    
     bombTicking = FindSendPropInfo("CPlantedC4", "m_bBombTicking");
-
+    
     HookEvent("round_start", OnRoundStart, EventHookMode_PostNoCopy);
     HookEvent("round_end", OnRoundEnd, EventHookMode_PostNoCopy);
 }
 
 public Action OnRoundStart(Event eEvent, const char[] sName, bool bDontBroadcast)
 {
-	hasBombBeenDeleted = false;
-	
-	if (!isPluginEnabled.BoolValue)
-	{
-		return Plugin_Continue;
-	}
-	
-	bomber = GetBomber();
-	
-	if (IsValidClient(bomber))
-	{
-		bombsite = GetNearestBombsite(bomber);
-		
-		int bomb = GetPlayerWeaponSlot(bomber, 4);
-		
-		hasBombBeenDeleted = SafeRemoveWeapon(bomber, bomb);
-		
-		GetClientAbsOrigin(bomber, bombPosition);
-		
-		delete bombTimer;
-		
-		bombTimer = CreateTimer(freezeTime.FloatValue, PlantBomb, bomber);
-	}
-	
-	return Plugin_Continue;
+    hasBombBeenDeleted = false;
+    
+    if (!isPluginEnabled.BoolValue)
+    {
+        return Plugin_Continue;
+    }
+    
+    bomber = GetBomber();
+    
+    if (IsValidClient(bomber))
+    {
+        bombsite = GetNearestBombsite(bomber);
+        
+        int bomb = GetPlayerWeaponSlot(bomber, 4);
+        
+        hasBombBeenDeleted = SafeRemoveWeapon(bomber, bomb);
+        
+        GetClientAbsOrigin(bomber, bombPosition);
+        
+        delete bombTimer;
+        
+        bombTimer = CreateTimer(freezeTime.FloatValue, PlantBomb, bomber);
+    }
+    
+    return Plugin_Continue;
 }
 
 public void OnRoundEnd(Event event, const char[] sName, bool bDontBroadcast)
@@ -99,23 +99,7 @@ public Action PlantBomb(Handle timer, int client)
                 ActivateEntity(bombEntity);
                 TeleportEntity(bombEntity, bombPosition, NULL_VECTOR, NULL_VECTOR);
 
-                if (!(GetEntityFlags(bombEntity) & FL_ONGROUND))
-                {
-                    float direction[3];
-                    float floor[3];
-
-                    Handle trace;
-
-                    direction[0] = 89.0;
-
-                    TR_TraceRay(bombPosition, direction, MASK_PLAYERSOLID_BRUSHONLY, RayType_Infinite);
-
-                    if (TR_DidHit(trace))
-                    {
-                        TR_GetEndPosition(floor, trace);
-                        TeleportEntity(bombEntity, floor, NULL_VECTOR, NULL_VECTOR);
-                    }
-                }
+                GroundEntity(bombEntity);
             }
         }
     } 
@@ -131,9 +115,9 @@ public void SendBombPlanted(int client)
 
     if (event != null)
     {
-	    event.SetInt("userid", GetClientUserId(client));
-	    event.SetInt("site", bombsite);
-	    event.Fire();
+        event.SetInt("userid", GetClientUserId(client));
+        event.SetInt("site", bombsite);
+        event.Fire();
     }
 }
 
@@ -165,21 +149,21 @@ stock bool SafeRemoveWeapon(int client, int weapon)
             }
         }
     }
-
+    
     return AcceptEntityInput(weapon, "Kill");
 }
 
 stock int GetBomber()
 {
-	for (int i = 1; i <= MaxClients; i++)
-	{
-		if (IsValidClient(i) && HasBomb(i))
-		{
-			return i;
-		}
-	}
-	
-	return -1;
+    for (int i = 1; i <= MaxClients; i++)
+    {
+        if (IsValidClient(i) && HasBomb(i))
+        {
+            return i;
+        }
+    }
+    
+    return -1;
 }
 
 stock bool HasBomb(int client)
@@ -195,29 +179,61 @@ stock bool IsWarmup()
 
 stock int GetNearestBombsite(int client)
 {
-	float pos[3];
-	GetClientAbsOrigin(client, pos);
-	
-	int playerResource = GetPlayerResourceEntity();
-	if (playerResource == -1)
-	{
-		return BOMBSITE_INVALID;
-	}
-	
-	float aCenter[3], bCenter[3];
-	GetEntPropVector(playerResource, Prop_Send, "m_bombsiteCenterA", aCenter);
-	GetEntPropVector(playerResource, Prop_Send, "m_bombsiteCenterB", bCenter);
-	
-	float aDist = GetVectorDistance(aCenter, pos, true);
-	float bDist = GetVectorDistance(bCenter, pos, true);
-	
-	if (aDist < bDist)
-	{
-		return BOMBSITE_A;
-	}
-	
-	return BOMBSITE_B;
+    float pos[3];
+    GetClientAbsOrigin(client, pos);
+    
+    int playerResource = GetPlayerResourceEntity();
+    if (playerResource == -1)
+    {
+        return BOMBSITE_INVALID;
+    }
+    
+    float aCenter[3], bCenter[3];
+    GetEntPropVector(playerResource, Prop_Send, "m_bombsiteCenterA", aCenter);
+    GetEntPropVector(playerResource, Prop_Send, "m_bombsiteCenterB", bCenter);
+    
+    float aDist = GetVectorDistance(aCenter, pos, true);
+    float bDist = GetVectorDistance(bCenter, pos, true);
+    
+    if (aDist < bDist)
+    {
+        return BOMBSITE_A;
+    }
+    
+    return BOMBSITE_B;
 }
+
+void GroundEntity(int entity)
+{
+    float flPos[3], flAng[3];
+    
+    GetEntPropVector(entity, Prop_Send, "m_vecOrigin", flPos);
+    flAng[0] = 0.0;//Make these angles go straight down, because I don't know what the values are.
+    flAng[1] = 0.0;
+    flAng[2] = 0.0;
+    Handle hTrace = TR_TraceRayFilterEx(flPos, flAng, MASK_SHOT, RayType_Infinite, TraceFilterIgnorePlayers, entity);
+    if (hTrace != INVALID_HANDLE && TR_DidHit(hTrace))
+    {
+        float endPos[3];
+        TR_GetEndPosition(endPos, hTrace);
+        CloseHandle(hTrace);
+        TeleportEntity(entity, endPos, NULL_VECTOR, NULL_VECTOR);
+    }
+    else
+    {
+        PrintToServer("Attempted to put entity on ground, but no end point found!");
+    }
+}
+
+public bool TraceFilterIgnorePlayers(int entity, int contentsMask, int client)
+{
+    if (entity >= 1 && entity <= MaxClients)
+    {
+        return false;
+    }
+    
+    return true;
+} 
 
 stock bool IsValidClient(int client)
 {
