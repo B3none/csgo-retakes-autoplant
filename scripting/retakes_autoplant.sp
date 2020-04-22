@@ -208,7 +208,7 @@ void GroundEntity(int entity)
     float flPos[3], flAng[3];
     
     GetEntPropVector(entity, Prop_Send, "m_vecOrigin", flPos);
-    flAng[0] = 0.0;//Make these angles go straight down, because I don't know what the values are.
+    flAng[0] = 90.0;
     flAng[1] = 0.0;
     flAng[2] = 0.0;
     Handle hTrace = TR_TraceRayFilterEx(flPos, flAng, MASK_SHOT, RayType_Infinite, TraceFilterIgnorePlayers, entity);
