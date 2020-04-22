@@ -203,6 +203,9 @@ stock int GetNearestBombsite(int client)
     return BOMBSITE_B;
 }
 
+/**
+ * https://forums.alliedmods.net/showpost.php?p=2239502&postcount=2
+ */
 void GroundEntity(int entity)
 {
     float flPos[3], flAng[3];
