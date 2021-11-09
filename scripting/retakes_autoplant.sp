@@ -74,8 +74,7 @@ public Action PlantBomb(Handle timer)
     {
         int bomb = GetPlayerWeaponSlot(bomber, 4);
         SetEntPropEnt(bomber, Prop_Send, "m_hActiveWeapon", bomb);
-        
-        GameRules_SetProp("m_fArmedTime", GetGameTime() - WEAPON_C4_ARM_TIME);
+        SetEntPropEnt(bomb, Prop_Send, "m_fArmedTime", GetGameTime() - WEAPON_C4_ARM_TIME);
         
         int buttons = GetEntityFlags(bomber);
         
