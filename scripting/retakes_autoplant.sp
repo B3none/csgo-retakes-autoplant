@@ -6,6 +6,9 @@
 #pragma newdecls required
 #pragma semicolon 1
 
+// https://github.com/perilouswithadollarsign/cstrike15_src/blob/f82112a2388b841d72cb62ca48ab1846dfcc11c8/game/shared/cstrike15/weapon_c4.cpp#L48
+const float WEAPON_C4_ARM_TIME = 3.0;
+
 int bomber = -1;
 Handle bombTimer;
 
@@ -73,7 +76,7 @@ public Action PlantBomb(Handle timer)
         int bomb = GetPlayerWeaponSlot(bomber, 4);
         SetEntPropEnt(bomber, Prop_Send, "m_hActiveWeapon", bomb);
         
-        GameRules_SetProp("m_fArmedTime", GetGameTime() - 3.0);
+        GameRules_SetProp("m_fArmedTime", GetGameTime() - WEAPON_C4_ARM_TIME);
         
         int buttons = GetEntityFlags(bomber);
         
@@ -96,16 +99,13 @@ public Action PlantBomb(Handle timer)
 
 public Action OnPlayerRunCmd(int client, int& buttons)
 {
-    if (client == bomber)
+    if (client == bomber && !HasBomb(client))
     {
-        if (!HasBomb(client))
+        if (buttons & FL_FROZEN)
         {
-            if (buttons & FL_FROZEN)
-            {
-                buttons &= ~FL_FROZEN;
-                
-                return Plugin_Changed;
-            }
+            buttons &= ~FL_FROZEN;
+            
+            return Plugin_Changed;
         }
     }
     
