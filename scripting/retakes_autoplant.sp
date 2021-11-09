@@ -9,7 +9,7 @@
 // https://github.com/perilouswithadollarsign/cstrike15_src/blob/f82112a2388b841d72cb62ca48ab1846dfcc11c8/game/shared/cstrike15/weapon_c4.cpp#L48
 const float WEAPON_C4_ARM_TIME = 3.0;
 
-int bomber = -1;
+int bomber;
 Handle bombTimer;
 
 ConVar isPluginEnabled;
