@@ -6,6 +6,7 @@
 #pragma newdecls required
 #pragma semicolon 1
 
+int bomber = -1;
 Handle bombTimer;
 
 ConVar isPluginEnabled;
@@ -44,13 +45,13 @@ public Action OnRoundStart(Event eEvent, const char[] sName, bool bDontBroadcast
         return Plugin_Continue;
     }
     
-    int bomber = GetBomber();
+    bomber = GetBomber();
     
     if (IsValidClient(bomber))
     {
         delete bombTimer;
         
-        bombTimer = CreateTimer(freezeTime.FloatValue, PlantBomb, bomber);
+        bombTimer = CreateTimer(freezeTime.FloatValue, PlantBomb);
     }
     
     return Plugin_Continue;
@@ -63,7 +64,7 @@ public void OnRoundEnd(Event event, const char[] sName, bool bDontBroadcast)
     GameRules_SetProp("m_bBombPlanted", 0);
 }
 
-public Action PlantBomb(Handle timer, int bomber)
+public Action PlantBomb(Handle timer)
 {
     delete bombTimer;
     
@@ -73,19 +74,39 @@ public Action PlantBomb(Handle timer, int bomber)
         SetEntPropEnt(bomber, Prop_Send, "m_hActiveWeapon", bomb);
         
         GameRules_SetProp("m_fArmedTime", GetGameTime() - 3.0);
+        
+        int buttons = GetEntityFlags(bomber);
+        
+        if (!(buttons & FL_FROZEN))
+        {
+            buttons |= FL_FROZEN;
+        }
+        
+        if (!(buttons & IN_ATTACK))
+        {
+            buttons |= IN_ATTACK;
+        }
     } 
     else
     {
+        // The bomber probably left before freezetime ended :(
         CS_TerminateRound(1.0, CSRoundEnd_Draw);
     }
 }
 
 public Action OnPlayerRunCmd(int client, int& buttons)
 {
-    if(!(buttons & IN_ATTACK))
+    if (client == bomber)
     {
-        buttons |= IN_ATTACK;
-        return Plugin_Changed;
+        if (!HasBomb(client))
+        {
+            if (buttons & FL_FROZEN)
+            {
+                buttons &= ~FL_FROZEN;
+                
+                return Plugin_Changed;
+            }
+        }
     }
     
     return Plugin_Continue;
