@@ -240,5 +240,5 @@ public bool TraceFilterIgnorePlayers(int entity, int contentsMask, int client)
 
 stock bool IsValidClient(int client)
 {
-    return client > 0 && client <= MaxClients && IsClientConnected(client) && IsClientInGame(client);
+    return client > 0 && client <= MaxClients && IsClientInGame(client);
 }
