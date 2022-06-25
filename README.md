@@ -1,5 +1,5 @@
 # Retakes Autoplant
-Here's my version of the retakes autoplant which is a little more efficient than alternatives.
+Automatically plant the bomb at the start of the round. This will work with all versions of the retakes plugin.
 
 # Compiling
 To compile this plugin I'd recommend using the [web compiler](https://spider.limetech.io/).
@@ -10,7 +10,7 @@ Alex Blackham - Developer and Maintainer - [B3none](https://b3none.co.uk/)
 
 ## Watch for releases
 
-So as to keep the latest version of the plugin I recommend watching the repository
+To keep the latest version of the plugin I recommend watching the repository
 
 ![Watch releases](https://github.com/b3none/gdprconsent/raw/development/.github/README_ASSETS/watch_releases.png)
 
