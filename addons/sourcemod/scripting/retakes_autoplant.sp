@@ -28,7 +28,7 @@ public Plugin myinfo =
     name = "[Retakes] Autoplant",
     author = "B3none",
     description = "Automatically plant the bomb at the start of the round. This will work with all versions of the retakes plugin.",
-    version = "2.3.1",
+    version = "2.3.3",
     url = "https://github.com/b3none"
 };
 
