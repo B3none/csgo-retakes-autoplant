@@ -28,7 +28,7 @@ public Plugin myinfo =
     name = "[Retakes] Autoplant",
     author = "B3none",
     description = "Automatically plant the bomb at the start of the round. This will work with all versions of the retakes plugin.",
-    version = "2.3.3",
+    version = "2.3.4",
     url = "https://github.com/b3none"
 };
 
@@ -46,6 +46,13 @@ public void OnPluginStart()
 
 public Action OnRoundStart(Event eEvent, const char[] sName, bool bDontBroadcast)
 {
+    // This delay is for compatability with ofir's retakes
+    CreateTimer(0.1, Timer_AutoplantBomb, _, TIMER_FLAG_NO_MAPCHANGE);
+    return Plugin_Continue;
+}
+
+public Action Timer_AutoplantBomb(Handle hTimer)
+{
     hasBombBeenDeleted = false;
     
     if (!isPluginEnabled.BoolValue)
@@ -59,7 +66,7 @@ public Action OnRoundStart(Event eEvent, const char[] sName, bool bDontBroadcast
     {
         bombsite = GetNearestBombsite(bomber);
         
-        int bomb = GetPlayerWeaponSlot(bomber, 4);
+        int bomb = GetPlayerWeaponSlot(bomber, CS_SLOT_C4);
         
         hasBombBeenDeleted = SafeRemoveWeapon(bomber, bomb);
         
@@ -82,7 +89,7 @@ public void OnRoundEnd(Event event, const char[] sName, bool bDontBroadcast)
 
 public Action PlantBomb(Handle timer, int client)
 {
-    bombTimer = INVALID_HANDLE;
+    bombTimer = null;
 
     if (IsValidClient(client) || !hasBombBeenDeleted)
     {
@@ -168,7 +175,7 @@ stock int GetBomber()
 
 stock bool HasBomb(int client)
 {
-    return GetPlayerWeaponSlot(client, 4) != -1;
+    return GetPlayerWeaponSlot(client, CS_SLOT_C4) != -1;
 }
 
 
@@ -215,7 +222,7 @@ void GroundEntity(int entity)
     flAng[1] = 0.0;
     flAng[2] = 0.0;
     Handle hTrace = TR_TraceRayFilterEx(flPos, flAng, MASK_SHOT, RayType_Infinite, TraceFilterIgnorePlayers, entity);
-    if (hTrace != INVALID_HANDLE && TR_DidHit(hTrace))
+    if (hTrace != null && TR_DidHit(hTrace))
     {
         float endPos[3];
         TR_GetEndPosition(endPos, hTrace);
