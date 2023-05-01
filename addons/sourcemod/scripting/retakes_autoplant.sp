@@ -28,7 +28,7 @@ public Plugin myinfo =
     name = "[Retakes] Autoplant",
     author = "B3none",
     description = "Automatically plant the bomb at the start of the round. This will work with all versions of the retakes plugin.",
-    version = "2.3.4",
+    version = "2.3.5",
     url = "https://github.com/b3none"
 };
 
@@ -120,12 +120,14 @@ public void SendBombPlanted(int client)
 {
     Event event = CreateEvent("bomb_planted");
 
-    if (event != null)
+    if (event == null)
     {
-        event.SetInt("userid", GetClientUserId(client));
-        event.SetInt("site", bombsite);
-        event.Fire();
+        return;    
     }
+    
+    event.SetInt("userid", GetClientUserId(client));
+    event.SetInt("site", bombsite);
+    event.Fire();
 }
 
 stock bool SafeRemoveWeapon(int client, int weapon)
