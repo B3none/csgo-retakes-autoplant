@@ -3,7 +3,7 @@ Automatically plant the bomb at the start of the round. This will work with all 
 
 # Compiling
 To compile this plugin I'd recommend using the [web compiler](https://spider.limetech.io/).
-The latest version is listed on the [releases tab](https://github.com/b3none/retakes-autoplant/releases)
+The latest version is listed on the [releases tab](https://github.com/b3none/csgo-retakes-autoplant/releases)
 
 # Author
 Alex Blackham - Developer and Maintainer - [B3none](https://b3none.co.uk/)
