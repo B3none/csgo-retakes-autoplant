@@ -1,4 +1,4 @@
-# Retakes Autoplant
+# CS:GO Retakes Autoplant
 Automatically plant the bomb at the start of the round. This will work with all versions of the retakes plugin.
 
 # Compiling
